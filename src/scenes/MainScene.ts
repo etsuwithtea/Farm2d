@@ -1,0 +1,348 @@
+// ========================================
+// MainScene — ฉากหลักของเกม
+// รวมระบบทั้งหมด: แผนที่, ผู้เล่น, สัตว์, NPC, ปลูกผัก
+// ========================================
+
+import Phaser from 'phaser';
+import { Player } from '../entities/Player';
+import { FarmAnimal } from '../entities/FarmAnimal';
+import { NPC } from '../entities/NPC';
+import { DialogBox } from '../ui/DialogBox';
+import { HUD } from '../ui/HUD';
+import { FarmingSystem } from '../systems/FarmingSystem';
+import { createTileMap } from '../world/TileMapGenerator';
+import { AnimalType, DialogData, GAME_CONFIG } from '../types';
+
+export class MainScene extends Phaser.Scene {
+  private player!: Player;
+  private animals: FarmAnimal[] = [];
+  private npcs: NPC[] = [];
+  private dialogBox!: DialogBox;
+  private hud!: HUD;
+  private farmingSystem!: FarmingSystem;
+  private spaceKey!: Phaser.Input.Keyboard.Key;
+  private fKey!: Phaser.Input.Keyboard.Key;
+  private numberKeys!: {
+    one: Phaser.Input.Keyboard.Key;
+    two: Phaser.Input.Keyboard.Key;
+    three: Phaser.Input.Keyboard.Key;
+    four: Phaser.Input.Keyboard.Key;
+  };
+  private obstacles!: Phaser.Physics.Arcade.StaticGroup;
+
+  constructor() {
+    super({ key: 'MainScene' });
+  }
+
+  create(): void {
+    const { TILE_SIZE, MAP_WIDTH, MAP_HEIGHT } = GAME_CONFIG;
+
+    // === ตั้งค่าโลก ===
+    this.physics.world.setBounds(
+      0, 0,
+      MAP_WIDTH * TILE_SIZE,
+      MAP_HEIGHT * TILE_SIZE
+    );
+
+    // === สร้างแผนที่ ===
+    const { obstacles, mapData } = createTileMap(this);
+    this.obstacles = obstacles;
+
+    // === สร้างผู้เล่น ===
+    this.player = new Player(
+      this,
+      13 * TILE_SIZE, // เริ่มที่ทางเดินกลาง
+      14 * TILE_SIZE
+    );
+
+    // Collision: Player ↔ Obstacles
+    this.physics.add.collider(this.player, this.obstacles);
+
+    // === สร้างสัตว์ฟาร์ม ===
+    this.createAnimals();
+
+    // Collision: Animals ↔ Obstacles
+    for (const animal of this.animals) {
+      this.physics.add.collider(animal, this.obstacles);
+      this.physics.add.collider(animal, this.player);
+    }
+
+    // === สร้าง NPCs ===
+    this.createNPCs();
+
+    // Collision: NPCs ↔ Obstacles
+    for (const npc of this.npcs) {
+      this.physics.add.collider(npc, this.obstacles);
+    }
+
+    // === Camera (ต้องตั้งก่อน UI เพื่อให้ UI อ่าน zoom ได้) ===
+    this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+    this.cameras.main.setBounds(
+      0, 0,
+      MAP_WIDTH * TILE_SIZE,
+      MAP_HEIGHT * TILE_SIZE
+    );
+    this.cameras.main.setZoom(2); // Pixel-perfect zoom
+
+    // === เริ่มต้น UIScene และสร้าง UI ===
+    this.scene.launch('UIScene');
+    const uiScene = this.scene.get('UIScene');
+
+    // === ระบบสนทนา ===
+    this.dialogBox = new DialogBox(uiScene);
+    this.spaceKey = this.input.keyboard!.addKey(
+      Phaser.Input.Keyboard.KeyCodes.SPACE
+    );
+    this.fKey = this.input.keyboard!.addKey(
+      Phaser.Input.Keyboard.KeyCodes.F
+    );
+    this.numberKeys = {
+      one: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
+      two: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
+      three: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.THREE),
+      four: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.FOUR),
+    };
+
+    // === ระบบปลูกผัก ===
+    this.farmingSystem = new FarmingSystem(this, this.player, mapData);
+
+    // === HUD ===
+    this.hud = new HUD(uiScene, this.player);
+
+    // === Ambient particles (fireflies) ===
+    this.createAmbientEffects();
+
+    // === Welcome message (auto-dismiss เร็วขึ้น) ===
+    this.time.delayedCall(800, () => {
+      this.dialogBox.show('📖 ระบบ', [
+        'ยินดีต้อนรับสู่ Pixel Farm 2D! 🌾',
+        'WASD/ลูกศร=เดิน  SPACE=คุย  E=ทำสวน',
+        'กด 1-4 เปลี่ยนเครื่องมือ  ขอให้สนุก! 🎉',
+      ], () => {
+        this.player.isInteracting = false;
+      });
+      this.player.isInteracting = true;
+
+      // Safety: ถ้า dialog ค้าง ให้ปลดล็อกอัตโนมัติ
+      this.time.delayedCall(15000, () => {
+        if (this.player.isInteracting && this.dialogBox.visible) {
+          this.dialogBox.forceClose();
+        } else if (this.player.isInteracting) {
+          this.player.isInteracting = false;
+        }
+      });
+    });
+  }
+
+  /** สร้างสัตว์ฟาร์ม */
+  private createAnimals(): void {
+    const { TILE_SIZE } = GAME_CONFIG;
+
+    const animalData: { type: AnimalType; x: number; y: number }[] = [
+      // ไก่ (บริเวณหญ้าด้านขวาบน)
+      { type: AnimalType.Chicken, x: 20 * TILE_SIZE, y: 6 * TILE_SIZE },
+      { type: AnimalType.Chicken, x: 22 * TILE_SIZE, y: 8 * TILE_SIZE },
+      { type: AnimalType.Chicken, x: 24 * TILE_SIZE, y: 5 * TILE_SIZE },
+
+      // หมู (บริเวณกลาง)
+      { type: AnimalType.Pig, x: 16 * TILE_SIZE, y: 10 * TILE_SIZE },
+      { type: AnimalType.Pig, x: 18 * TILE_SIZE, y: 12 * TILE_SIZE },
+
+      // วัว (บริเวณฝั่งขวาของแม่น้ำ)
+      { type: AnimalType.Cow, x: 35 * TILE_SIZE, y: 8 * TILE_SIZE },
+      { type: AnimalType.Cow, x: 37 * TILE_SIZE, y: 14 * TILE_SIZE },
+    ];
+
+    for (const data of animalData) {
+      const animal = new FarmAnimal(this, data.x, data.y, data.type);
+      this.animals.push(animal);
+    }
+  }
+
+  /** สร้าง NPCs */
+  private createNPCs(): void {
+    const { TILE_SIZE } = GAME_CONFIG;
+
+    const npcData: { spriteKey: string; x: number; y: number; dialog: DialogData }[] = [
+      {
+        spriteKey: 'npc-farmer',
+        x: 7 * TILE_SIZE,
+        y: 14 * TILE_SIZE,
+        dialog: {
+          name: '👨‍🌾 ลุงสมชาย',
+          lines: [
+            'สวัสดี! ยินดีต้อนรับสู่ฟาร์มของเรา!',
+            'ที่นี่เราปลูกผักและเลี้ยงสัตว์กันนะ',
+            'ลองไปดูแปลงผักทางด้านล่างสิ',
+            'กด E เพื่อไถดิน หว่านเมล็ด แล้วรดน้ำ',
+            'รอสักพักผักก็จะโตเต็มที่ เก็บขายได้เลย!',
+          ],
+        },
+      },
+      {
+        spriteKey: 'npc-merchant',
+        x: 20 * TILE_SIZE,
+        y: 14 * TILE_SIZE,
+        dialog: {
+          name: '🧑‍💼 แม่ค้าสมฤดี',
+          lines: [
+            'มาซื้อเมล็ดพันธุ์ไหมจ๊ะ~',
+            'กดตัวเลข 1-4 บนแป้นพิมพ์เพื่อซื้อได้เลยจ้า!',
+            '(1)🍅มะเขือเทศ 15💰  (2)🥕แครอท 10💰',
+            '(3)🌽ข้าวโพด 20💰  (4)🎃ฟักทอง 35💰',
+            'ถ้าเงินพอซื้อ ระบบจะเอาของเข้ากระเป๋าอัตโนมัติ!',
+          ],
+        },
+      },
+      {
+        spriteKey: 'npc-elder',
+        x: 5 * TILE_SIZE,
+        y: 4 * TILE_SIZE,
+        dialog: {
+          name: '👴 ปู่ทองดี',
+          lines: [
+            'ข้าเคยทำฟาร์มนี้มากว่า 50 ปีแล้ว',
+            'สมัยก่อนที่นี่ทุ่งหญ้ากว้างใหญ่',
+            'ตอนนี้เจ้ามาช่วยดูแล ข้าก็ดีใจ',
+            'อย่าลืมรดน้ำผักทุกวันนะ!',
+            'แล้วก็ดูแลสัตว์ฟาร์มด้วยล่ะ 🐔🐷🐄',
+          ],
+        },
+      },
+    ];
+
+    for (const data of npcData) {
+      const npc = new NPC(this, data.x, data.y, data.spriteKey, data.dialog);
+      this.npcs.push(npc);
+    }
+  }
+
+  /** Ambient effects (ฝุ่นลอย / fireflies) */
+  private createAmbientEffects(): void {
+    const { TILE_SIZE, MAP_WIDTH, MAP_HEIGHT } = GAME_CONFIG;
+
+    // สร้าง particle texture (ถ้ายังไม่มี)
+    if (!this.textures.exists('particle')) {
+      const particleCanvas = document.createElement('canvas');
+      particleCanvas.width = 4;
+      particleCanvas.height = 4;
+      const pctx = particleCanvas.getContext('2d')!;
+      pctx.fillStyle = '#ffffaa';
+      pctx.fillRect(1, 1, 2, 2);
+      this.textures.addImage('particle', particleCanvas as any);
+    }
+
+    // Particle emitter
+    try {
+      const emitter = this.add.particles(0, 0, 'particle', {
+        x: { min: 0, max: MAP_WIDTH * TILE_SIZE },
+        y: { min: 0, max: MAP_HEIGHT * TILE_SIZE },
+        lifespan: { min: 3000, max: 6000 },
+        speed: { min: 5, max: 15 },
+        scale: { start: 0.8, end: 0 },
+        alpha: { start: 0.6, end: 0 },
+        frequency: 800,
+        blendMode: 'ADD',
+      });
+      emitter.setDepth(1000);
+    } catch {
+      // Particles ไม่สำคัญมาก ถ้า error ก็ข้ามไป
+      console.warn('Particle system skipped');
+    }
+  }
+
+  update(_time: number, delta: number): void {
+    // Fullscreen toggle (F key)
+    if (Phaser.Input.Keyboard.JustDown(this.fKey)) {
+      if (this.scale.isFullscreen) {
+        this.scale.stopFullscreen();
+      } else {
+        this.scale.startFullscreen();
+      }
+    }
+
+    // Player update
+    this.player.update();
+
+    // Animals update
+    for (const animal of this.animals) {
+      animal.update();
+    }
+
+    // NPCs update + proximity check
+    const { INTERACTION_DISTANCE } = GAME_CONFIG;
+    for (const npc of this.npcs) {
+      const dist = Phaser.Math.Distance.Between(
+        this.player.x, this.player.y,
+        npc.x, npc.y
+      );
+      npc.isNearPlayer = dist < INTERACTION_DISTANCE;
+      npc.update();
+    }
+
+    // Dialog interaction (SPACE)
+    if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
+      if (this.dialogBox.visible) {
+        this.dialogBox.advance();
+      } else if (!this.player.isInteracting) {
+        // หา NPC ที่ใกล้ที่สุด
+        for (const npc of this.npcs) {
+          if (npc.isNearPlayer) {
+            this.player.isInteracting = true;
+            this.dialogBox.show(
+              npc.dialogData.name,
+              npc.dialogData.lines,
+              () => {
+                this.player.isInteracting = false;
+              }
+            );
+            break;
+          }
+        }
+      }
+    }
+
+    // ระบบการซื้อเมล็ดพันธุ์ตอนเปิด DialogBox
+    if (this.dialogBox.visible && this.player.isInteracting) {
+      const activeNpc = this.npcs.find(npc => npc.isNearPlayer);
+      if (activeNpc && activeNpc.dialogData.name === '🧑‍💼 แม่ค้าสมฤดี') {
+        const JustDown = Phaser.Input.Keyboard.JustDown;
+        if (JustDown(this.numberKeys.one)) {
+          this.buySeed('tomato_seed', 15, '🍅');
+        } else if (JustDown(this.numberKeys.two)) {
+          this.buySeed('carrot_seed', 10, '🥕');
+        } else if (JustDown(this.numberKeys.three)) {
+          this.buySeed('corn_seed', 20, '🌽');
+        } else if (JustDown(this.numberKeys.four)) {
+          this.buySeed('pumpkin_seed', 35, '🎃');
+        }
+      }
+    }
+
+    // Dialog box update
+    this.dialogBox.update();
+
+    // Farming system update
+    if (!this.dialogBox.visible) {
+      this.farmingSystem.update(delta);
+    }
+
+    // HUD update
+    this.hud.update();
+  }
+
+  /** ฟังก์ชันซื้อเมล็ดพันธุ์ */
+  private buySeed(seedId: string, cost: number, icon: string): void {
+    if (this.player.spendCoins(cost)) {
+      this.player.addItem(seedId, 1, icon);
+      // เปลี่ยนข้อความบอกว่าซื้อสำเร็จ
+      this.dialogBox.show('✅ ระบบ', [`สั่งซื้อ ${icon} สำเร็จ! หักไป ${cost} 💰`], () => {
+         this.player.isInteracting = false;
+      });
+    } else {
+      this.dialogBox.show('❌ ระบบ', [`ฮ่าๆ เงินไม่พอจ้ะ! ต้องใช้ ${cost} 💰`], () => {
+         this.player.isInteracting = false;
+      });
+    }
+  }
+}
