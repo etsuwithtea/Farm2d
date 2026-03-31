@@ -85,13 +85,13 @@ export enum TileType {
 
 /** ค่าคงที่ของเกม */
 export const GAME_CONFIG = {
-  TILE_SIZE: 32,
+  TILE_SIZE: 8,
   MAP_WIDTH: 40,      // จำนวน tile แนวนอน
   MAP_HEIGHT: 30,     // จำนวน tile แนวตั้ง
-  PLAYER_SPEED: 160,
-  ANIMAL_SPEED: 40,
-  NPC_SPEED: 50,
-  INTERACTION_DISTANCE: 48,
+  PLAYER_SPEED: 40,
+  ANIMAL_SPEED: 10,
+  NPC_SPEED: 12,
+  INTERACTION_DISTANCE: 12,
   GROWTH_TIME: {
     [CropType.Tomato]: 15000,   // 15 วินาที
     [CropType.Carrot]: 10000,   // 10 วินาที

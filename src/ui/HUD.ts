@@ -1,10 +1,11 @@
 // ========================================
-// HUD — Heads-Up Display
+// HUD — Heads-Up Display (8×8 pixel art style)
 // แสดงข้อมูลเหรียญ, inventory, เครื่องมือ, controls
 // ========================================
 
 import Phaser from 'phaser';
 import { Player } from '../entities/Player';
+import { GAME_CONFIG } from '../types';
 
 export class HUD {
   private scene: Phaser.Scene;
@@ -17,6 +18,7 @@ export class HUD {
   private inventoryText: Phaser.GameObjects.Text;
   private controlsText: Phaser.GameObjects.Text;
   private toolBg: Phaser.GameObjects.Graphics;
+  private toolIcon: Phaser.GameObjects.Image;
 
   // Mini-map
   private miniMapContainer: Phaser.GameObjects.Container;
@@ -28,88 +30,96 @@ export class HUD {
     this.player = player;
 
     const cam = scene.cameras.main;
-    this.container = scene.add.container(0, 0).setDepth(900).setScrollFactor(0);
+    const UI_SCALE = 1.5;
+    this.container = scene.add.container(0, 0).setDepth(900).setScrollFactor(0).setScale(UI_SCALE);
+    const viewW = cam.width / UI_SCALE;
+    const viewH = cam.height / UI_SCALE;
 
-    // === COIN DISPLAY (มุมซ้ายบน) ===
+    // === COIN DISPLAY (มุมซ้ายบน) — compact ===
     const coinBg = scene.add.graphics();
-    coinBg.fillStyle(0x1a1a3e, 0.85);
-    coinBg.fillRoundedRect(10, 10, 160, 36, 8);
-    coinBg.lineStyle(2, 0xffd700, 0.8);
-    coinBg.strokeRoundedRect(10, 10, 160, 36, 8);
+    coinBg.fillStyle(0x0a0a2e, 0.85);
+    coinBg.fillRoundedRect(6, 6, 90, 20, 4);
+    coinBg.lineStyle(1, 0xffd700, 0.7);
+    coinBg.strokeRoundedRect(6, 6, 90, 20, 4);
 
-    this.coinText = scene.add.text(38, 18, '🪙 50', {
-      fontSize: '14px',
+    this.coinText = scene.add.text(14, 10, '🪙 50', {
+      fontSize: '8px',
       fontFamily: '"Press Start 2P", monospace',
       color: '#ffd700',
       stroke: '#000',
-      strokeThickness: 2,
+      strokeThickness: 1,
     });
 
-    // === TOOL DISPLAY (มุมซ้าย ใต้ coin) ===
+    // === TOOL DISPLAY (ใต้ coin) — compact ===
     this.toolBg = scene.add.graphics();
     this.drawToolBg('hoe');
 
-    this.toolText = scene.add.text(16, 56, '', {
-      fontSize: '11px',
+    this.toolText = scene.add.text(14, 34, '', {
+      fontSize: '7px',
       fontFamily: '"Press Start 2P", monospace',
       color: '#ffffff',
       stroke: '#000',
-      strokeThickness: 2,
+      strokeThickness: 1,
     });
 
-    // === INVENTORY (มุมซ้ายกลาง) ===
-    this.inventoryText = scene.add.text(16, 94, '', {
-      fontSize: '9px',
+    this.toolIcon = scene.add.image(104, 39, 'tool-hoe').setScale(1.5);
+
+    // === INVENTORY (ใต้ tool) — compact ===
+    this.inventoryText = scene.add.text(10, 58, '', {
+      fontSize: '6px',
       fontFamily: '"Press Start 2P", monospace',
       color: '#cccccc',
       stroke: '#000',
-      strokeThickness: 2,
-      lineSpacing: 6,
+      strokeThickness: 1,
+      lineSpacing: 4,
     });
 
-    // === CONTROLS (มุมขวาล่าง) ===
+    // === CONTROLS (มุมขวาล่าง) — smaller ===
+    const ctrlW = 180;
+    const ctrlH = 100;
     const controlsBg = scene.add.graphics();
-    controlsBg.fillStyle(0x1a1a3e, 0.75);
-    controlsBg.fillRoundedRect(cam.width - 220, cam.height - 130, 210, 120, 8);
-    controlsBg.lineStyle(1, 0x4a90d9, 0.5);
-    controlsBg.strokeRoundedRect(cam.width - 220, cam.height - 130, 210, 120, 8);
+    controlsBg.fillStyle(0x0a0a2e, 0.75);
+    controlsBg.fillRoundedRect(viewW - ctrlW - 6, viewH - ctrlH - 6, ctrlW, ctrlH, 4);
+    controlsBg.lineStyle(1, 0x4a90d9, 0.4);
+    controlsBg.strokeRoundedRect(viewW - ctrlW - 6, viewH - ctrlH - 6, ctrlW, ctrlH, 4);
 
     this.controlsText = scene.add.text(
-      cam.width - 210,
-      cam.height - 122,
+      viewW - ctrlW,
+      viewH - ctrlH - 1,
       [
-        '🎮 Controls:',
-        'WASD/↑↓←→  เดิน',
-        'E          ทำสวน',
-        'SPACE      คุย NPC',
-        '1 จอบ  2 น้ำ',
-        '3 เมล็ด  4 เก็บ',
-        'F          เต็มจอ',
+        'Controls',
+        ' ',
+        'WASD/Arrow : Move',
+        'E : Farm   ,F : Fullscr',
+        'SPACE : Talk NPC',
+        '1 : Hoe , 2 : Water',
+        '3 : Seed , 4 : Harvest',
       ].join('\n'),
       {
-        fontSize: '9px',
+        fontSize: '7px',
         fontFamily: '"Press Start 2P", monospace',
-        color: '#aaaadd',
+        color: '#fafafeff',
         stroke: '#000',
-        strokeThickness: 2,
-        lineSpacing: 6,
+        strokeThickness: 1,
+        lineSpacing: 4,
       }
     );
 
-    // === MINI-MAP (มุมขวาบน) ===
+    // === MINI-MAP (มุมขวาบน) — smaller ===
+    const mmW = 80;
+    const mmH = 60;
     this.miniMapContainer = scene.add.container(
-      cam.width - 130, 10
-    ).setScrollFactor(0).setDepth(901);
+      cam.width - (mmW * UI_SCALE) - 10 * UI_SCALE, 10 * UI_SCALE
+    ).setScrollFactor(0).setDepth(901).setScale(UI_SCALE);
 
     this.miniMapBg = scene.add.graphics();
     this.miniMapBg.fillStyle(0x000000, 0.7);
-    this.miniMapBg.fillRoundedRect(0, 0, 120, 90, 6);
-    this.miniMapBg.lineStyle(1, 0x4a90d9, 0.8);
-    this.miniMapBg.strokeRoundedRect(0, 0, 120, 90, 6);
+    this.miniMapBg.fillRoundedRect(0, 0, mmW, mmH, 3);
+    this.miniMapBg.lineStyle(1, 0x4a90d9, 0.7);
+    this.miniMapBg.strokeRoundedRect(0, 0, mmW, mmH, 3);
 
-    // วาดแผนที่ย่อ (static — สร้างครั้งเดียว)
     const miniMapGraphics = scene.add.graphics();
-    this.drawMiniMap(miniMapGraphics);
+    this.drawMiniMap(miniMapGraphics, mmW, mmH);
 
     this.miniMapPlayerDot = scene.add.graphics();
 
@@ -124,13 +134,14 @@ export class HUD {
       this.coinText,
       this.toolBg,
       this.toolText,
+      this.toolIcon,
       this.inventoryText,
       controlsBg,
       this.controlsText,
     ]);
   }
 
-  /** วาดพื้นหลัง tool indicator */
+  /** วาดพื้นหลัง tool indicator — compact */
   private drawToolBg(tool: string): void {
     const toolColors: Record<string, number> = {
       hoe: 0x8b4513,
@@ -140,25 +151,23 @@ export class HUD {
     };
 
     this.toolBg.clear();
-    this.toolBg.fillStyle(0x1a1a3e, 0.85);
-    this.toolBg.fillRoundedRect(10, 50, 190, 36, 8);
-    this.toolBg.lineStyle(2, toolColors[tool] || 0x888888, 0.8);
-    this.toolBg.strokeRoundedRect(10, 50, 190, 36, 8);
+    this.toolBg.fillStyle(0x0a0a2e, 0.85);
+    this.toolBg.fillRoundedRect(6, 30, 110, 18, 4);
+    this.toolBg.lineStyle(1, toolColors[tool] || 0x888888, 0.7);
+    this.toolBg.strokeRoundedRect(6, 30, 110, 18, 4);
   }
 
-  /** วาด mini-map */
-  private drawMiniMap(g: Phaser.GameObjects.Graphics): void {
-    const { MAP_WIDTH, MAP_HEIGHT, TILE_SIZE } = {
-      MAP_WIDTH: 40,
-      MAP_HEIGHT: 30,
-      TILE_SIZE: 32,
-    };
-    const scaleX = 116 / (MAP_WIDTH * TILE_SIZE);
-    const scaleY = 86 / (MAP_HEIGHT * TILE_SIZE);
+  /** วาด mini-map — ใช้ TILE_SIZE ที่ถูกต้อง */
+  private drawMiniMap(g: Phaser.GameObjects.Graphics, mmW: number, mmH: number): void {
+    const { MAP_WIDTH, MAP_HEIGHT, TILE_SIZE } = GAME_CONFIG;
+    const innerW = mmW - 4;
+    const innerH = mmH - 4;
+    const scaleX = innerW / (MAP_WIDTH * TILE_SIZE);
+    const scaleY = innerH / (MAP_HEIGHT * TILE_SIZE);
 
-    // วาดสีเขียวเป็นพื้น
+    // พื้นเขียว
     g.fillStyle(0x5da03a, 0.8);
-    g.fillRect(2, 2, 116, 86);
+    g.fillRect(2, 2, innerW, innerH);
 
     // แม่น้ำ
     g.fillStyle(0x4a9bd9, 0.9);
@@ -192,36 +201,39 @@ export class HUD {
 
     // Tool
     const toolNames: Record<string, string> = {
-      hoe: '⛏️ จอบ (1)',
-      water: '💧 บัวรดน้ำ (2)',
-      seed: '🌱 เมล็ดพันธุ์ (3)',
-      harvest: '🫳 เก็บเกี่ยว (4)',
+      hoe: 'Hoe(1)',
+      water: 'Water(2)',
+      seed: 'Seed(3)',
+      harvest: 'Harvest(4)',
     };
     this.toolText.setText(toolNames[state.selectedTool] || state.selectedTool);
     this.drawToolBg(state.selectedTool);
+    this.toolIcon.setTexture('tool-' + state.selectedTool);
 
     // Inventory
     const invLines = state.inventory
       .filter(i => i.count > 0)
-      .map(i => `${i.icon || '📦'} ${i.type}: ${i.count}`)
-      .slice(0, 6);
-    this.inventoryText.setText(invLines.join('\n'));
+      .map(i => `${i.icon || '📦'}${i.count}`)
+      .slice(0, 4);
+    this.inventoryText.setText(invLines.join(' '));
 
     // Mini-map player dot
-    const { MAP_WIDTH, MAP_HEIGHT, TILE_SIZE } = {
-      MAP_WIDTH: 40, MAP_HEIGHT: 30, TILE_SIZE: 32,
-    };
+    const { MAP_WIDTH, MAP_HEIGHT, TILE_SIZE } = GAME_CONFIG;
     const worldW = MAP_WIDTH * TILE_SIZE;
     const worldH = MAP_HEIGHT * TILE_SIZE;
-    const dotX = 2 + (this.player.x / worldW) * 116;
-    const dotY = 2 + (this.player.y / worldH) * 86;
+    const mmW = 80;
+    const mmH = 60;
+    const innerW = mmW - 4;
+    const innerH = mmH - 4;
+    const dotX = 2 + (this.player.x / worldW) * innerW;
+    const dotY = 2 + (this.player.y / worldH) * innerH;
 
     this.miniMapPlayerDot.clear();
     this.miniMapPlayerDot.fillStyle(0xff4444, 1);
-    this.miniMapPlayerDot.fillCircle(dotX, dotY, 3);
+    this.miniMapPlayerDot.fillCircle(dotX, dotY, 2);
     // กระพริบ
     const alpha = 0.5 + Math.sin(this.scene.time.now * 0.008) * 0.5;
     this.miniMapPlayerDot.fillStyle(0xff6666, alpha);
-    this.miniMapPlayerDot.fillCircle(dotX, dotY, 5);
+    this.miniMapPlayerDot.fillCircle(dotX, dotY, 3);
   }
 }

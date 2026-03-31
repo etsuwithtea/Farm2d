@@ -14,7 +14,7 @@ export class FarmAnimal extends Phaser.Physics.Arcade.Sprite {
   private isMoving: boolean = false;
   private homeX: number;
   private homeY: number;
-  private wanderRadius: number = 100;
+  private wanderRadius: number = 24;
 
   constructor(
     scene: Phaser.Scene,
@@ -32,8 +32,8 @@ export class FarmAnimal extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
 
     this.setCollideWorldBounds(true);
-    this.setSize(20, 20);
-    this.setOffset(6, 10);
+    this.setSize(6, 6);
+    this.setOffset(1, 1);
     this.setDepth(4);
 
     // สร้าง animation ถ้ายังไม่มี

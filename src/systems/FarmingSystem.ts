@@ -36,14 +36,14 @@ export class FarmingSystem {
     // สถานะข้อความ
     this.statusText = scene.add.text(
       scene.cameras.main.width / 2,
-      scene.cameras.main.height - 160,
+      scene.cameras.main.height - 90,
       '',
       {
-        fontSize: '11px',
+        fontSize: '8px',
         fontFamily: '"Press Start 2P", monospace',
         color: '#ffffff',
         stroke: '#000000',
-        strokeThickness: 3,
+        strokeThickness: 2,
         align: 'center',
       }
     )
@@ -130,10 +130,10 @@ export class FarmingSystem {
       case PlotState.Empty:
         if (tool === 'hoe') {
           plot.state = PlotState.Tilled;
-          this.showStatus('🌱 ไถดินแล้ว! เลือกเมล็ดแล้วกด E');
+          this.showStatus('Tilled! Select seed & press E');
           this.updatePlotVisual(plot);
         } else {
-          this.showStatus('⛏️ เลือก "จอบ" (กด 1) แล้วกด E');
+          this.showStatus('Select Hoe (press 1) then E');
         }
         break;
 
@@ -145,13 +145,13 @@ export class FarmingSystem {
             plot.state = PlotState.Seeded;
             plot.crop = seed;
             plot.growthRequired = GAME_CONFIG.GROWTH_TIME[seed];
-            this.showStatus(`🌱 หว่านเมล็ด${this.getCropName(seed)}แล้ว! รดน้ำเลย`);
+            this.showStatus(`Planted ${this.getCropName(seed)}! Water it!`);
             this.updatePlotVisual(plot);
           } else {
-            this.showStatus('❌ ไม่มีเมล็ดพันธุ์แล้ว!');
+            this.showStatus('No seeds left!');
           }
         } else {
-          this.showStatus('🌱 เลือก "เมล็ด" (กด 3) แล้วกด E');
+          this.showStatus('Select Seed (press 3) then E');
         }
         break;
 
@@ -160,10 +160,10 @@ export class FarmingSystem {
           plot.state = PlotState.Growing;
           plot.watered = true;
           plot.growthTimer = 0;
-          this.showStatus('💧 รดน้ำแล้ว! รอพืชผลเติบโต...');
+          this.showStatus('Watered! Wait for crops to grow...');
           this.updatePlotVisual(plot);
         } else {
-          this.showStatus('💧 เลือก "บัวรดน้ำ" (กด 2) แล้วกด E');
+          this.showStatus('Select Water (press 2) then E');
         }
         break;
 
@@ -171,18 +171,18 @@ export class FarmingSystem {
         const progress = Math.floor(
           (plot.growthTimer / plot.growthRequired) * 100
         );
-        this.showStatus(`🌿 กำลังเติบโต... ${progress}%`);
+        this.showStatus(`Growing... ${progress}%`);
         break;
 
       case PlotState.Ready:
         if (tool === 'harvest' || true) {
-          // เก็บเกี่ยวได้เสมอ
+          // Always harvestable
           const crop = plot.crop!;
           const value = GAME_CONFIG.CROP_VALUE[crop];
           this.player.addCoins(value);
           this.player.addItem(crop, 1, this.getCropEmoji(crop));
           this.showStatus(
-            `🎉 เก็บเกี่ยว${this.getCropName(crop)}! +${value} 🪙`
+            `Harvested ${this.getCropName(crop)}! +${value}G`
           );
 
           // Reset แปลง
@@ -242,7 +242,7 @@ export class FarmingSystem {
         if (!this.cropSprites.has(key)) {
           const seedling = this.scene.add.sprite(
             plot.x, plot.y, 'seedling'
-          ).setDepth(plot.y - 1).setScale(0.7);
+          ).setDepth(plot.y - 1);
           this.cropSprites.set(key, seedling);
         }
         break;
@@ -259,19 +259,19 @@ export class FarmingSystem {
 
   /** อัปเดตทุกเฟรม */
   update(delta: number): void {
-    // เลือก tool
+    // Select tool
     if (Phaser.Input.Keyboard.JustDown(this.toolKeys.one)) {
       this.player.playerState.selectedTool = 'hoe';
-      this.showStatus('⛏️ เลือก: จอบ');
+      this.showStatus('Selected: Hoe');
     } else if (Phaser.Input.Keyboard.JustDown(this.toolKeys.two)) {
       this.player.playerState.selectedTool = 'water';
-      this.showStatus('💧 เลือก: บัวรดน้ำ');
+      this.showStatus('Selected: Watering Can');
     } else if (Phaser.Input.Keyboard.JustDown(this.toolKeys.three)) {
       this.player.playerState.selectedTool = 'seed';
-      this.showStatus('🌱 เลือก: เมล็ดพันธุ์');
+      this.showStatus('Selected: Seeds');
     } else if (Phaser.Input.Keyboard.JustDown(this.toolKeys.four)) {
       this.player.playerState.selectedTool = 'harvest';
-      this.showStatus('🫳 เลือก: เก็บเกี่ยว');
+      this.showStatus('Selected: Harvest');
     }
 
     // ตรวจสอบ interaction
@@ -319,10 +319,10 @@ export class FarmingSystem {
 
   private getCropName(crop: CropType): string {
     const names: Record<CropType, string> = {
-      [CropType.Tomato]: 'มะเขือเทศ',
-      [CropType.Carrot]: 'แครอท',
-      [CropType.Corn]: 'ข้าวโพด',
-      [CropType.Pumpkin]: 'ฟักทอง',
+      [CropType.Tomato]: 'Tomato',
+      [CropType.Carrot]: 'Carrot',
+      [CropType.Corn]: 'Corn',
+      [CropType.Pumpkin]: 'Pumpkin',
     };
     return names[crop];
   }

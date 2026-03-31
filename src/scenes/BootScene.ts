@@ -1,22 +1,28 @@
 // ========================================
-// BootScene — โหลดและสร้าง Assets ทั้งหมด
+// BootScene — โหลด TinyFarm Sprite Sheets
 // พร้อม Loading Bar Animation
 // ========================================
 
 import Phaser from 'phaser';
 import {
-  generatePlayerSpritesheet,
-  generateNPCSpritesheets,
-  generateAnimalSpritesheets,
-  generateTileset,
-  generateObstacleTextures,
-  generateUITextures,
+  preloadAssets,
+  createCharacterSpritesheets,
+  createAnimalSpritesheets,
+  createTileset,
+  createObstacleTextures,
+  createCropTextures,
+  createUITextures,
   createAnimations,
 } from '../utils/SpriteGenerator';
 
 export class BootScene extends Phaser.Scene {
   constructor() {
     super({ key: 'BootScene' });
+  }
+
+  /** โหลด sprite sheet images */
+  preload(): void {
+    preloadAssets(this);
   }
 
   create(): void {
@@ -35,7 +41,7 @@ export class BootScene extends Phaser.Scene {
       strokeThickness: 4,
     }).setOrigin(0.5);
 
-    this.add.text(cx, cy - 45, 'เดินชมฟาร์ม', {
+    this.add.text(cx, cy - 45, 'Explore the Farm', {
       fontSize: '14px',
       fontFamily: '"Press Start 2P", monospace',
       color: '#ffd700',
@@ -54,7 +60,7 @@ export class BootScene extends Phaser.Scene {
     const barFill = this.add.graphics();
 
     // Loading text
-    const loadText = this.add.text(cx, cy + 50, 'กำลังสร้างโลก...', {
+    const loadText = this.add.text(cx, cy + 50, 'Building world...', {
       fontSize: '10px',
       fontFamily: '"Press Start 2P", monospace',
       color: '#aaaadd',
@@ -62,12 +68,12 @@ export class BootScene extends Phaser.Scene {
 
     // Simulate loading progress
     const steps = [
-      'กำลังวาดตัวละคร...',
-      'กำลังสร้างสัตว์ฟาร์ม...',
-      'กำลังปลูกต้นไม้...',
-      'กำลังสร้างแผนที่...',
-      'กำลังเตรียมเครื่องมือ...',
-      'เกือบเสร็จแล้ว...',
+      'Drawing characters...',
+      'Creating farm animals...',
+      'Planting trees...',
+      'Building the map...',
+      'Preparing tools...',
+      'Almost ready...',
     ];
 
     let currentStep = 0;
@@ -101,8 +107,8 @@ export class BootScene extends Phaser.Scene {
         }
 
         if (currentStep >= totalSteps) {
-          loadText.setText('พร้อมเริ่มเกม!');
-          // สร้าง assets ทั้งหมด
+          loadText.setText('Ready to play!');
+          // สร้าง assets ทั้งหมดจาก loaded sprite sheets
           this.generateAllAssets();
 
           this.time.delayedCall(500, () => {
@@ -113,25 +119,25 @@ export class BootScene extends Phaser.Scene {
     });
   }
 
-  /** สร้าง procedural assets ทั้งหมด */
+  /** สร้าง assets จาก TinyFarm sprite sheets */
   private generateAllAssets(): void {
     // 1. Tileset
-    generateTileset(this);
+    createTileset(this);
 
-    // 2. Player
-    generatePlayerSpritesheet(this);
+    // 2. Characters (Player + NPCs)
+    createCharacterSpritesheets(this);
     createAnimations(this, 'player');
 
-    // 3. NPCs
-    generateNPCSpritesheets(this);
+    // 3. Animals
+    createAnimalSpritesheets(this);
 
-    // 4. Animals
-    generateAnimalSpritesheets(this);
+    // 4. Obstacles & decorations
+    createObstacleTextures(this);
 
-    // 5. Obstacles & Items
-    generateObstacleTextures(this);
+    // 5. Crops
+    createCropTextures(this);
 
     // 6. UI textures
-    generateUITextures(this);
+    createUITextures(this);
   }
 }

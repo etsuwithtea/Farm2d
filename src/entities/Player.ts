@@ -26,8 +26,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // ตั้งค่า Physics
     this.setCollideWorldBounds(true);
-    this.setSize(20, 20);
-    this.setOffset(6, 10);
+    this.setSize(6, 6);
+    this.setOffset(1, 2);
     this.setDepth(5);
 
     // ตั้งค่า Input

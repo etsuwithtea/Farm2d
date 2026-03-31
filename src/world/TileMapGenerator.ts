@@ -94,18 +94,18 @@ function generateMapData(): number[][] {
   return map;
 }
 
-/** ข้อมูล Obstacle (ต้นไม้ รั้ว หิน) */
+/** Obstacle data (trees, fences, rocks, structures) */
 export interface ObstacleData {
   x: number;
   y: number;
-  type: 'tree' | 'fence' | 'rock';
+  type: 'tree' | 'fence' | 'rock' | 'house' | 'barn' | 'windmill' | 'fence-tl' | 'fence-tr' | 'fence-h' | 'fence-bl' | 'fence-br' | 'fence-v';
 }
 
-/** สร้าง Obstacles */
+/** Generate obstacles */
 function generateObstacles(): ObstacleData[] {
   const obstacles: ObstacleData[] = [];
 
-  // ต้นไม้กระจายรอบฟาร์ม
+  // Trees around the farm
   const treePositions = [
     [2, 7], [8, 6], [0, 12], [1, 16],
     [15, 3], [17, 6], [22, 2], [25, 5],
@@ -118,43 +118,62 @@ function generateObstacles(): ObstacleData[] {
     obstacles.push({ x: tx, y: ty, type: 'tree' });
   }
 
-  // รั้วรอบแปลงปลูก (ซ้ายล่าง)
+  // Fences around left farm plot
   for (let x = 2; x <= 11; x++) {
-    obstacles.push({ x, y: 17, type: 'fence' });
-    obstacles.push({ x, y: 26, type: 'fence' });
+    if (x === 2) {
+      obstacles.push({ x, y: 17, type: 'fence-tl' });
+      obstacles.push({ x, y: 26, type: 'fence-bl' });
+    } else if (x === 11) {
+      obstacles.push({ x, y: 17, type: 'fence-tr' });
+      obstacles.push({ x, y: 26, type: 'fence-br' });
+    } else {
+      obstacles.push({ x, y: 17, type: 'fence-h' });
+      obstacles.push({ x, y: 26, type: 'fence-h' });
+    }
   }
-  for (let y = 17; y <= 26; y++) {
-    // ทางซ้าย (ทึบ)
-    obstacles.push({ x: 2, y, type: 'fence' });
-    
-    // ทางขวา (ติดกับทางเดิน x=11) เปิดช่องที่ y=20, 21
+  for (let y = 18; y <= 25; y++) {
+    obstacles.push({ x: 2, y, type: 'fence-v' });
     if (y !== 20 && y !== 21) {
-      obstacles.push({ x: 11, y, type: 'fence' });
+      obstacles.push({ x: 11, y, type: 'fence-v' });
     }
   }
 
-  // รั้วรอบแปลงปลูก (ขวา)
+  // Fences around right farm plot
   for (let x = 15; x <= 24; x++) {
-    obstacles.push({ x, y: 17, type: 'fence' });
-    obstacles.push({ x, y: 24, type: 'fence' });
-  }
-  for (let y = 17; y <= 24; y++) {
-    // ทางซ้าย (ติดกับทางเดิน x=15) เปิดช่องที่ y=20, 21
-    if (y !== 20 && y !== 21) {
-      obstacles.push({ x: 15, y, type: 'fence' });
+    if (x === 15) {
+      obstacles.push({ x, y: 17, type: 'fence-tl' });
+      obstacles.push({ x, y: 24, type: 'fence-bl' });
+    } else if (x === 24) {
+      obstacles.push({ x, y: 17, type: 'fence-tr' });
+      obstacles.push({ x, y: 24, type: 'fence-br' });
+    } else {
+      obstacles.push({ x, y: 17, type: 'fence-h' });
+      obstacles.push({ x, y: 24, type: 'fence-h' });
     }
-    
-    // ทางขวา (ทึบ)
-    obstacles.push({ x: 24, y, type: 'fence' });
+  }
+  for (let y = 18; y <= 23; y++) {
+    if (y !== 20 && y !== 21) {
+      obstacles.push({ x: 15, y, type: 'fence-v' });
+    }
+    obstacles.push({ x: 24, y, type: 'fence-v' });
   }
 
-  // ก้อนหิน
+  // Rocks
   const rockPositions = [
     [5, 12], [19, 9], [26, 15], [10, 28], [32, 10], [34, 20],
   ];
   for (const [rx, ry] of rockPositions) {
     obstacles.push({ x: rx, y: ry, type: 'rock' });
   }
+
+  // Structures: farmhouse near the path intersection
+  obstacles.push({ x: 3, y: 2, type: 'house' });
+
+  // Barn near the animal area
+  obstacles.push({ x: 22, y: 3, type: 'barn' });
+
+  // Windmill on the right side
+  obstacles.push({ x: 36, y: 4, type: 'windmill' });
 
   return obstacles;
 }
@@ -197,8 +216,22 @@ export function createTileMap(scene: Phaser.Scene): {
       obs.type
     ) as Phaser.Physics.Arcade.Sprite;
 
-    // ปรับ hitbox ให้เล็กกว่า sprite นิดหน่อย
-    sprite.setSize(TILE_SIZE * 0.7, TILE_SIZE * 0.7);
+    if (obs.type === 'tree') {
+      sprite.setOrigin(0.5, 1);
+      sprite.setPosition(obs.x * TILE_SIZE + TILE_SIZE / 2, obs.y * TILE_SIZE + TILE_SIZE);
+      sprite.setSize(TILE_SIZE * 0.8, TILE_SIZE * 0.8);
+      sprite.setOffset(16 / 2 - (TILE_SIZE * 0.8) / 2, 24 - TILE_SIZE * 0.8);
+    } else if (obs.type === 'rock') {
+      sprite.setOrigin(0.5, 1);
+      sprite.setPosition(obs.x * TILE_SIZE + TILE_SIZE / 2, obs.y * TILE_SIZE + TILE_SIZE);
+      sprite.setSize(TILE_SIZE * 0.8, TILE_SIZE * 0.8);
+      sprite.setOffset(16 / 2 - (TILE_SIZE * 0.8) / 2, 16 - TILE_SIZE * 0.8);
+    } else if (['house', 'barn', 'windmill'].includes(obs.type)) {
+      sprite.setSize(20, 16);
+      sprite.setOffset(2, 8); // Offset collision towards the bottom
+    } else {
+      sprite.setSize(TILE_SIZE * 0.8, TILE_SIZE * 0.8);
+    }
     sprite.setDepth(1);
     sprite.refreshBody();
   }

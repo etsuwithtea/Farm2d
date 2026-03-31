@@ -34,8 +34,8 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
     scene.physics.add.existing(this);
 
     this.setCollideWorldBounds(true);
-    this.setSize(20, 20);
-    this.setOffset(6, 10);
+    this.setSize(6, 6);
+    this.setOffset(1, 2);
     this.setDepth(4);
     this.setImmovable(true);
 
@@ -43,20 +43,20 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
     createAnimations(scene, spriteKey);
 
     // ชื่อ NPC แสดงเหนือหัว
-    this.nameTag = scene.add.text(x, y - 24, dialog.name, {
-      fontSize: '10px',
+    this.nameTag = scene.add.text(x, y - 8, dialog.name, {
+      fontSize: '6px',
       fontFamily: '"Press Start 2P", monospace',
       color: '#ffffff',
       stroke: '#000000',
-      strokeThickness: 3,
+      strokeThickness: 2,
       align: 'center',
-    }).setOrigin(0.5).setDepth(100);
+    }).setOrigin(0.5).setDepth(100).setScale(0.5);
 
     // สร้าง "!" indicator (ซ่อนไว้ก่อน)
-    this.indicator = scene.add.image(x, y - 30, 'indicator')
+    this.indicator = scene.add.image(x, y - 10, 'indicator')
       .setDepth(101)
       .setVisible(false)
-      .setScale(1.5);
+      .setScale(0.8);
 
     // เริ่มเดินสุ่ม
     this.startWander();
@@ -106,11 +106,11 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
   /** อัปเดตตำแหน่ง nameTag และ indicator */
   update(): void {
     if (this.nameTag) {
-      this.nameTag.setPosition(this.x, this.y - 24);
+      this.nameTag.setPosition(this.x, this.y - 8);
       this.nameTag.setDepth(this.y + 1);
     }
     if (this.indicator) {
-      this.indicator.setPosition(this.x, this.y - 32);
+      this.indicator.setPosition(this.x, this.y - 10);
       this.indicator.setVisible(this.isNearPlayer);
       this.indicator.setDepth(this.y + 2);
 
