@@ -52,10 +52,16 @@ function generateMapData(): number[][] {
     map[y][5] = TileType.DirtPath;
     map[y][6] = TileType.DirtPath;
   }
-  for (let x = 5; x < 13; x++) {
+  for (let x = 5; x < 15; x++) {
     map[4][x] = TileType.DirtPath;
     map[5][x] = TileType.DirtPath;
   }
+  // ทางเชื่อมเข้าบ้านซ้ายบนหลังที่สอง
+  map[3][13] = TileType.DirtPath;
+  map[3][14] = TileType.DirtPath;
+  // ทางเชื่อมเข้าบ้านซ้ายเบื้องล่าง
+  map[10][7] = TileType.DirtPath;
+  map[10][8] = TileType.DirtPath;
 
   // === แปลงปลูกผัก (ฝั่งซ้ายล่าง) ===
   for (let y = 18; y <= 25; y++) {
@@ -76,6 +82,8 @@ function generateMapData(): number[][] {
     [3, 8], [7, 3], [20, 5], [25, 8], [18, 3],
     [22, 10], [8, 10], [26, 3], [15, 7], [24, 13],
     [35, 5], [37, 10], [36, 18], [38, 22], [35, 25],
+    [2, 28], [5, 25], [14, 2], [16, 5], [30, 2],
+    [32, 7], [12, 18], [15, 27], [20, 25], [22, 28]
   ];
   for (const [fx, fy] of flowerSpots) {
     if (fx < MAP_WIDTH && fy < MAP_HEIGHT && map[fy][fx] === TileType.Grass) {
@@ -113,6 +121,11 @@ function generateObstacles(): ObstacleData[] {
     [0, 22], [0, 26], [14, 27], [20, 27],
     [25, 27], [35, 2], [38, 6], [36, 12],
     [38, 16], [36, 22], [38, 26], [35, 28],
+    // Map bounds enclosure
+    [4, 0], [9, 0], [14, 0], [19, 0],
+    [0, 5], [0, 10], [0, 15], [0, 20], [0, 28],
+    [39, 5], [39, 10], [39, 15], [39, 20], [39, 25],
+    [6, 29], [10, 29], [16, 29], [22, 29], [28, 29],
   ];
   for (const [tx, ty] of treePositions) {
     obstacles.push({ x: tx, y: ty, type: 'tree' });
@@ -168,6 +181,8 @@ function generateObstacles(): ObstacleData[] {
 
   // Structures: farmhouse near the path intersection
   obstacles.push({ x: 3, y: 2, type: 'house' });
+  obstacles.push({ x: 13, y: 1, type: 'house' }); // บ้านหลังที่ 2
+  obstacles.push({ x: 8, y: 8, type: 'house' });  // บ้านหลังที่ 3
 
   // Barn near the animal area
   obstacles.push({ x: 22, y: 3, type: 'barn' });

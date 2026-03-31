@@ -151,6 +151,18 @@ export class MainScene extends Phaser.Scene {
       // Cows (right side of river)
       { type: AnimalType.Cow, x: 35 * TILE_SIZE, y: 8 * TILE_SIZE },
       { type: AnimalType.Cow, x: 37 * TILE_SIZE, y: 14 * TILE_SIZE },
+
+      // Cats (near house)
+      { type: AnimalType.Cat, x: 4 * TILE_SIZE, y: 4 * TILE_SIZE },
+      { type: AnimalType.Cat, x: 6 * TILE_SIZE, y: 3 * TILE_SIZE },
+
+      // Dogs (near barn)
+      { type: AnimalType.Dog, x: 23 * TILE_SIZE, y: 5 * TILE_SIZE },
+
+      // Ducks (near river/pond)
+      { type: AnimalType.Duck, x: 3 * TILE_SIZE, y: 1 * TILE_SIZE }, // pond
+      { type: AnimalType.Duck, x: 30 * TILE_SIZE, y: 14 * TILE_SIZE }, // river
+      { type: AnimalType.Duck, x: 32 * TILE_SIZE, y: 22 * TILE_SIZE }, // river
     ];
 
     for (const data of animalData) {

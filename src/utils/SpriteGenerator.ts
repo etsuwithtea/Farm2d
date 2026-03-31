@@ -121,8 +121,11 @@ interface AnimalDef {
 }
 
 const ANIMAL_DEFS: AnimalDef[] = [
-  { key: 'chicken', startCol: 8 },   // Brown chicken, cols 8-9
+  { key: 'cat', startCol: 0 },       // Orange cat, cols 0-1
   { key: 'pig', startCol: 2 },       // Pink pig, cols 2-3
+  { key: 'duck', startCol: 6 },      // White duck/goose, cols 6-7
+  { key: 'chicken', startCol: 8 },   // Brown chicken, cols 8-9
+  { key: 'dog', startCol: 12 },      // Orange-brown dog, cols 12-13
   { key: 'cow', startCol: 14 },      // Cow/spotted, cols 14-15
 ];
 
@@ -168,13 +171,13 @@ export function createTileset(scene: Phaser.Scene): void {
     [3, 1],  // 1: GrassDark (green with speckles, row 0 col 1)
     [0, 3],  // 2: Dirt (solid orange dirt, row 2 col 0)
     [1, 3],  // 3: DirtPath (solid cyan/grey dirt, row 2 col 4)
-    [8, 3],  // 4: Water (solid blue water, row 3 col 8)
-    [9, 3],  // 5: WaterDeep (solid blue water, row 3 col 9)
+    [8, 1],  // 4: Water (solid blue water, row 3 col 8)
+    [8, 2],  // 5: WaterDeep (solid blue water, row 3 col 9)
     [5, 0],  // 6: Flower1 (grass with flowers, row 0 col 5)
     [7, 0],  // 7: Flower2 (grass with flowers, row 0 col 7)
     [1, 4],  // 8: FarmSoil (tilled orange dirt, row 3 col 1)
     [2, 4],  // 9: FarmSoilWet (tilled orange dirt, row 3 col 3)
-    [0, 2],  // 10: Bridge (fallback to dirt, row 2 col 0)
+    [5, 3],  // 10: Bridge (fallback to dirt, row 2 col 0)
   ];
 
   const count = 16;

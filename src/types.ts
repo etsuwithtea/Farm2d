@@ -15,6 +15,9 @@ export enum AnimalType {
   Chicken = 'chicken',
   Pig = 'pig',
   Cow = 'cow',
+  Cat = 'cat',
+  Dog = 'dog',
+  Duck = 'duck',
 }
 
 /** สถานะของแปลงปลูก */

@@ -33,7 +33,7 @@ export class BootScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#1a1a2e');
 
     // Title
-    this.add.text(cx, cy - 80, '🌾 Pixel Farm 2D', {
+    this.add.text(cx, cy - 80, 'Pixel Farm 2D', {
       fontSize: '28px',
       fontFamily: '"Press Start 2P", monospace',
       color: '#7ec850',
