@@ -35,7 +35,7 @@ export enum CropType {
   Tomato = 'tomato',
   Carrot = 'carrot',
   Corn = 'corn',
-  Pumpkin = 'pumpkin',
+  Rice = 'rice',
 }
 
 /** ข้อมูลแปลงปลูก */
@@ -48,6 +48,7 @@ export interface FarmPlot {
   crop: CropType | null;
   growthTimer: number;     // เวลาที่โตแล้ว (ms)
   growthRequired: number;  // เวลาที่ต้องโต (ms)
+  growthStage: number;     // ระยะการเติบโต (0-3)
   watered: boolean;
 }
 
@@ -95,16 +96,23 @@ export const GAME_CONFIG = {
   ANIMAL_SPEED: 10,
   NPC_SPEED: 12,
   INTERACTION_DISTANCE: 12,
+  STAGES_COUNT: 4,    // จำนวน stage การโต
   GROWTH_TIME: {
     [CropType.Tomato]: 15000,   // 15 วินาที
     [CropType.Carrot]: 10000,   // 10 วินาที
     [CropType.Corn]: 20000,     // 20 วินาที
-    [CropType.Pumpkin]: 25000,  // 25 วินาที
+    [CropType.Rice]: 12000,     // 12 วินาที
   },
   CROP_VALUE: {
     [CropType.Tomato]: 15,
     [CropType.Carrot]: 10,
     [CropType.Corn]: 20,
-    [CropType.Pumpkin]: 35,
+    [CropType.Rice]: 18,
+  },
+  CROP_HEIGHTS: {
+    [CropType.Tomato]: 16,
+    [CropType.Carrot]: 8,
+    [CropType.Corn]: 16,
+    [CropType.Rice]: 8,
   },
 } as const;

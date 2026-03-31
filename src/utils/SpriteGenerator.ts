@@ -4,6 +4,7 @@
 // ========================================
 
 import Phaser from 'phaser';
+import { CropType, GAME_CONFIG } from '../types';
 import animalsUrl from '../assets/TinyFarm_Animals.png';
 import charsUrl from '../assets/TinyFarm_Characters.png';
 import cropsUrl from '../assets/TinyFarm_Crops.png';
@@ -242,18 +243,62 @@ export function createObstacleTextures(scene: Phaser.Scene): void {
 export function createCropTextures(scene: Phaser.Scene): void {
   const src = getSource(scene, SHEET_KEYS.crops);
 
-  // Seedling (early growth) - Tile 3,0
+  // Legacy Seedling (early growth) - Tile 3,0
   scene.textures.addImage('seedling', extractRegion(src, 24, 0, 8, 8) as any);
 
-  // Mature crops — correct columns (col 6 = x48) based on actual sprite locations
-  const cropMap: Record<string, [number, number]> = {
-    'crop-tomato': [48, 0],
-    'crop-carrot': [48, 16],
-    'crop-corn': [48, 40],
-    'crop-pumpkin': [48, 56],
+  // Define crop row positions (top row of the pair if tall)
+  const cropRows: Record<string, number> = {
+    [CropType.Tomato]: 4 * 8, // Row 4
+    [CropType.Carrot]: 12 * 8, // Row 12
+    [CropType.Corn]: 10 * 8,   // Row 10
+    [CropType.Rice]: 14 * 8,   // Row 14
   };
-  for (const [key, [sx, sy]] of Object.entries(cropMap)) {
-    scene.textures.addImage(key, extractRegion(src, sx, sy, 8, 8) as any);
+
+  const cropTypes = Object.values(CropType);
+
+  for (const type of cropTypes) {
+    const rowY = cropRows[type];
+    const isTall = GAME_CONFIG.CROP_HEIGHTS[type] === 16;
+
+    for (let stage = 0; stage < 4; stage++) {
+      let sx = 0;
+      let sy = rowY;
+      let sw = 8;
+      let sh = 8;
+
+      // Col 3: Stage 0, Col 4: Stage 1, Col 5: Stage 2, Col 6: Stage 3 (Mature)
+      if (stage === 0) sx = 24;
+      else if (stage === 1) sx = 32;
+      else if (stage === 2) sx = 40;
+      else if (stage === 3) sx = 48;
+
+      // For tall plants, stage 2 and 3 are 8x16
+      if (isTall && stage >= 2) {
+        sh = 16;
+      }
+
+      const key = `crop-${type}-${stage}`;
+      const region = extractRegion(src, sx, sy, sw, sh);
+      scene.textures.addImage(key, region as any);
+
+      // Extract seed icon from column 2 (x=16) and item icon from column 1 (x=8)
+      if (stage === 0) {
+        const seedBagKey = `seed-bag-${type}`;
+        if (!scene.textures.exists(seedBagKey)) {
+          scene.textures.addImage(seedBagKey, extractRegion(src, 16, rowY, 8, 8) as any);
+        }
+        
+        const itemIconKey = `item-icon-${type}`;
+        if (!scene.textures.exists(itemIconKey)) {
+          scene.textures.addImage(itemIconKey, extractRegion(src, 0, rowY, 8, 8) as any);
+        }
+      }
+
+      // Legacy compatibility for mature stage
+      if (stage === 3) {
+        scene.textures.addImage(`crop-${type}`, region as any);
+      }
+    }
   }
 }
 

@@ -5,7 +5,7 @@
 
 import Phaser from 'phaser';
 import { Player } from '../entities/Player';
-import { GAME_CONFIG } from '../types';
+import { GAME_CONFIG, CropType } from '../types';
 
 export class HUD {
   private scene: Phaser.Scene;
@@ -15,10 +15,12 @@ export class HUD {
   // UI Elements
   private coinText: Phaser.GameObjects.Text;
   private toolText: Phaser.GameObjects.Text;
-  private inventoryText: Phaser.GameObjects.Text;
   private controlsText: Phaser.GameObjects.Text;
   private toolBg: Phaser.GameObjects.Graphics;
   private toolIcon: Phaser.GameObjects.Image;
+  private seedBg: Phaser.GameObjects.Graphics;
+  private seedIcons: Record<string, Phaser.GameObjects.Image> = {};
+  private seedTexts: Record<string, Phaser.GameObjects.Text> = {};
 
   // Mini-map
   private miniMapContainer: Phaser.GameObjects.Container;
@@ -64,14 +66,26 @@ export class HUD {
 
     this.toolIcon = scene.add.image(104, 39, 'tool-hoe').setScale(1.5);
 
-    // === INVENTORY (ใต้ tool) — compact ===
-    this.inventoryText = scene.add.text(10, 58, '', {
-      fontSize: '6px',
-      fontFamily: '"Press Start 2P", monospace',
-      color: '#cccccc',
-      stroke: '#000',
-      strokeThickness: 1,
-      lineSpacing: 4,
+    // === SEED DISPLAY (ใต้ tool) — compact ===
+    this.seedBg = scene.add.graphics();
+    this.drawSeedBg();
+
+    const cropTypes = Object.values(CropType) as CropType[];
+    const startX = 14;
+    const spacing = 28;
+
+    cropTypes.forEach((type, index) => {
+      const x = startX + index * spacing;
+      const y = 63;
+      
+      this.seedIcons[type] = scene.add.image(x, y, `seed-bag-${type}`).setScale(1.2);
+      this.seedTexts[type] = scene.add.text(x + 6, y - 5, '0', {
+        fontSize: '5px',
+        fontFamily: '"Press Start 2P", monospace',
+        color: '#ffffff',
+        stroke: '#000',
+        strokeThickness: 1,
+      });
     });
 
     // === CONTROLS (มุมขวาล่าง) — smaller ===
@@ -135,7 +149,9 @@ export class HUD {
       this.toolBg,
       this.toolText,
       this.toolIcon,
-      this.inventoryText,
+      this.seedBg,
+      ...Object.values(this.seedIcons),
+      ...Object.values(this.seedTexts),
       controlsBg,
       this.controlsText,
     ]);
@@ -155,6 +171,15 @@ export class HUD {
     this.toolBg.fillRoundedRect(6, 30, 110, 18, 4);
     this.toolBg.lineStyle(1, toolColors[tool] || 0x888888, 0.7);
     this.toolBg.strokeRoundedRect(6, 30, 110, 18, 4);
+  }
+
+  /** วาดพื้นหลัง seed indicator */
+  private drawSeedBg(): void {
+    this.seedBg.clear();
+    this.seedBg.fillStyle(0x0a0a2e, 0.85);
+    this.seedBg.fillRoundedRect(6, 54, 110, 18, 4);
+    this.seedBg.lineStyle(1, 0x8bc34a, 0.7);
+    this.seedBg.strokeRoundedRect(6, 54, 110, 18, 4);
   }
 
   /** วาด mini-map — ใช้ TILE_SIZE ที่ถูกต้อง */
@@ -210,12 +235,25 @@ export class HUD {
     this.drawToolBg(state.selectedTool);
     this.toolIcon.setTexture('tool-' + state.selectedTool);
 
-    // Inventory
-    const invLines = state.inventory
-      .filter(i => i.count > 0)
-      .map(i => `${i.icon || '📦'}${i.count}`)
-      .slice(0, 4);
-    this.inventoryText.setText(invLines.join(' '));
+    // Seed Slots (Update all 4)
+    (Object.values(CropType) as CropType[]).forEach(type => {
+      const seedType = `${type}_seed`;
+      const item = state.inventory.find(i => i.type === seedType);
+      const count = item ? item.count : 0;
+      
+      this.seedTexts[type].setText(`${count}`);
+      // Use vegetable icon instead of bag for better recognition
+      this.seedIcons[type].setTexture(`item-icon-${type}`);
+      // Highlight if it's the first available seed (what player will plant next)
+      const currentSeed = this.player.getAvailableSeed();
+      if (type === currentSeed) {
+        this.seedIcons[type].setAlpha(1).setScale(1.4);
+        this.seedTexts[type].setColor('#ffd700');
+      } else {
+        this.seedIcons[type].setAlpha(count > 0 ? 0.7 : 0.3).setScale(1.2);
+        this.seedTexts[type].setColor(count > 0 ? '#ffffff' : '#666666');
+      }
+    });
 
     // Mini-map player dot
     const { MAP_WIDTH, MAP_HEIGHT, TILE_SIZE } = GAME_CONFIG;

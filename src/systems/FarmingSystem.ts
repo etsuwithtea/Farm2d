@@ -85,6 +85,7 @@ export class FarmingSystem {
             growthTimer: 0,
             growthRequired: 0,
             watered: false,
+            growthStage: 0,
           });
         }
       }
@@ -145,6 +146,8 @@ export class FarmingSystem {
             plot.state = PlotState.Seeded;
             plot.crop = seed;
             plot.growthRequired = GAME_CONFIG.GROWTH_TIME[seed];
+            plot.growthTimer = 0;
+            plot.growthStage = 0;
             this.showStatus(`Planted ${this.getCropName(seed)}! Water it!`);
             this.updatePlotVisual(plot);
           } else {
@@ -160,6 +163,7 @@ export class FarmingSystem {
           plot.state = PlotState.Growing;
           plot.watered = true;
           plot.growthTimer = 0;
+          plot.growthStage = 0;
           this.showStatus('Watered! Wait for crops to grow...');
           this.updatePlotVisual(plot);
         } else {
@@ -238,17 +242,48 @@ export class FarmingSystem {
       case PlotState.Growing:
         existingSprite.setFrame(TileType.FarmSoilWet);
         existingSprite.clearTint();
-        // แสดงต้นอ่อน
-        if (!this.cropSprites.has(key)) {
-          const seedling = this.scene.add.sprite(
-            plot.x, plot.y, 'seedling'
-          ).setDepth(plot.y - 1);
-          this.cropSprites.set(key, seedling);
+        // แสดงต้นอ่อน / ต้นที่กำลังโต
+        if (plot.crop) {
+          const cropType = plot.crop;
+          const stage = plot.growthStage;
+          const cropKey = `crop-${cropType}-${stage}`;
+          // Position at the bottom of the 8x8 tile
+          const baseY = plot.y + 4;
+
+          let cropSprite = this.cropSprites.get(key);
+          if (!cropSprite) {
+            cropSprite = this.scene.add.sprite(
+              plot.x, baseY, cropKey
+            ).setOrigin(0.5, 1).setDepth(plot.y);
+            this.cropSprites.set(key, cropSprite);
+          } else {
+            cropSprite.setTexture(cropKey);
+            cropSprite.setY(baseY);
+            cropSprite.setOrigin(0.5, 1);
+          }
         }
         break;
       case PlotState.Ready:
         existingSprite.setFrame(TileType.FarmSoilWet);
         existingSprite.clearTint();
+        // แสดงพืชที่โตเต็มที่
+        if (plot.crop) {
+          const cropType = plot.crop;
+          const cropKey = `crop-${cropType}-3`; // Stage 3 is mature
+          const baseY = plot.y + 4;
+
+          let cropSprite = this.cropSprites.get(key);
+          if (!cropSprite) {
+            cropSprite = this.scene.add.sprite(
+              plot.x, baseY, cropKey
+            ).setOrigin(0.5, 1).setDepth(plot.y);
+            this.cropSprites.set(key, cropSprite);
+          } else {
+            cropSprite.setTexture(cropKey);
+            cropSprite.setY(baseY);
+            cropSprite.setOrigin(0.5, 1);
+          }
+        }
         break;
       case PlotState.Empty:
         existingSprite.setFrame(TileType.FarmSoil);
@@ -287,31 +322,37 @@ export class FarmingSystem {
       if (plot.state === PlotState.Growing && plot.watered) {
         plot.growthTimer += delta;
 
+        // คำนวณ Stage (0 ถึง 3)
+        const progress = plot.growthTimer / plot.growthRequired;
+        const newStage = Math.min(
+          GAME_CONFIG.STAGES_COUNT - 1,
+          Math.floor(progress * GAME_CONFIG.STAGES_COUNT)
+        );
+
+        if (newStage !== plot.growthStage) {
+          plot.growthStage = newStage;
+          this.updatePlotVisual(plot);
+        }
+
         if (plot.growthTimer >= plot.growthRequired) {
           plot.state = PlotState.Ready;
           plot.growthTimer = plot.growthRequired;
+          plot.growthStage = 3;
 
-          // แสดงพืชโตเต็ม
-          const key = `${plot.tileX},${plot.tileY}`;
-          const oldSeedling = this.cropSprites.get(key);
-          if (oldSeedling) oldSeedling.destroy();
-
-          const cropKey = `crop-${plot.crop}`;
-          const cropSprite = this.scene.add.sprite(
-            plot.x, plot.y, cropKey
-          ).setDepth(plot.y - 1);
-
-          // Animation โผล่ขึ้นมา
-          cropSprite.setScale(0);
-          this.scene.tweens.add({
-            targets: cropSprite,
-            scale: 1,
-            duration: 300,
-            ease: 'Back.easeOut',
-          });
-
-          this.cropSprites.set(key, cropSprite);
           this.updatePlotVisual(plot);
+
+          // Animation โผล่ขึ้นมา (ถ้าเพิ่งเปลี่ยนเป็น Ready)
+          const key = `${plot.tileX},${plot.tileY}`;
+          const cropSprite = this.cropSprites.get(key);
+          if (cropSprite) {
+            cropSprite.setScale(0.5);
+            this.scene.tweens.add({
+              targets: cropSprite,
+              scale: 1,
+              duration: 300,
+              ease: 'Back.easeOut',
+            });
+          }
         }
       }
     }
@@ -322,7 +363,7 @@ export class FarmingSystem {
       [CropType.Tomato]: 'Tomato',
       [CropType.Carrot]: 'Carrot',
       [CropType.Corn]: 'Corn',
-      [CropType.Pumpkin]: 'Pumpkin',
+      [CropType.Rice]: 'Rice',
     };
     return names[crop];
   }
@@ -332,7 +373,7 @@ export class FarmingSystem {
       [CropType.Tomato]: '🍅',
       [CropType.Carrot]: '🥕',
       [CropType.Corn]: '🌽',
-      [CropType.Pumpkin]: '🎃',
+      [CropType.Rice]: '🌾',
     };
     return emojis[crop];
   }

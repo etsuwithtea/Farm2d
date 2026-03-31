@@ -46,7 +46,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         { type: 'tomato_seed', count: 5, icon: '🍅' },
         { type: 'carrot_seed', count: 5, icon: '🥕' },
         { type: 'corn_seed', count: 3, icon: '🌽' },
-        { type: 'pumpkin_seed', count: 2, icon: '🎃' },
+        { type: 'rice_seed', count: 5, icon: '🌾' },
       ],
       selectedTool: 'hoe',
     };
@@ -149,7 +149,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       'tomato_seed': CropType.Tomato,
       'carrot_seed': CropType.Carrot,
       'corn_seed': CropType.Corn,
-      'pumpkin_seed': CropType.Pumpkin,
+      'rice_seed': CropType.Rice,
     };
 
     for (const [seedType, cropType] of Object.entries(seedMap)) {
