@@ -21,14 +21,16 @@ export class MainScene extends Phaser.Scene {
   private hud!: HUD;
   private farmingSystem!: FarmingSystem;
   private spaceKey!: Phaser.Input.Keyboard.Key;
-  private fKey!: Phaser.Input.Keyboard.Key;
+  private eKey!: Phaser.Input.Keyboard.Key;
   private numberKeys!: {
     one: Phaser.Input.Keyboard.Key;
     two: Phaser.Input.Keyboard.Key;
     three: Phaser.Input.Keyboard.Key;
     four: Phaser.Input.Keyboard.Key;
+    S: Phaser.Input.Keyboard.Key;
   };
   private obstacles!: Phaser.Physics.Arcade.StaticGroup;
+  private shippingBin!: Phaser.GameObjects.Sprite;
 
   constructor() {
     super({ key: 'MainScene' });
@@ -93,15 +95,27 @@ export class MainScene extends Phaser.Scene {
     this.spaceKey = this.input.keyboard!.addKey(
       Phaser.Input.Keyboard.KeyCodes.SPACE
     );
-    this.fKey = this.input.keyboard!.addKey(
-      Phaser.Input.Keyboard.KeyCodes.F
+    this.eKey = this.input.keyboard!.addKey(
+      Phaser.Input.Keyboard.KeyCodes.E
     );
     this.numberKeys = {
       one: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ONE),
       two: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.TWO),
       three: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.THREE),
       four: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.FOUR),
+      S: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S),
     };
+
+    // === Shipping Bin ===
+    this.shippingBin = this.add.sprite(
+      15 * TILE_SIZE + TILE_SIZE / 2,
+      13 * TILE_SIZE + TILE_SIZE / 2,
+      'shipping-bin'
+    );
+    this.physics.add.existing(this.shippingBin, true);
+    this.physics.add.collider(this.player, this.shippingBin);
+    this.shippingBin.setDepth(13); // Below houses, above ground
+
 
     // === Farming system ===
     this.farmingSystem = new FarmingSystem(this, this.player, mapData);
@@ -131,6 +145,11 @@ export class MainScene extends Phaser.Scene {
           this.player.isInteracting = false;
         }
       });
+    });
+
+    // === Input Listeners (Mouse Click) ===
+    this.input.on('pointerdown', () => {
+      this.handleInteraction(false); // Called with isSpace=false
     });
   }
 
@@ -199,10 +218,10 @@ export class MainScene extends Phaser.Scene {
           name: 'Merchant',
           lines: [
             'Want to buy some seeds?',
-            'Press 1-4 on keyboard to purchase!',
-            '(1) Tomato 15G  (2) Carrot 10G',
-            '(3) Corn 20G    (4) Pumpkin 35G',
-            'If you have enough gold, auto-buy!',
+            'Press 1-4 to purchase seeds.',
+            'Press S to sell ALL your produce!',
+            '(1) Tomato 15G (2) Carrot 10G',
+            '(3) Corn 20G (4) Pumpkin 35G',
           ],
         },
       },
@@ -261,15 +280,6 @@ export class MainScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
-    // Fullscreen toggle (F key)
-    if (Phaser.Input.Keyboard.JustDown(this.fKey)) {
-      if (this.scale.isFullscreen) {
-        this.scale.stopFullscreen();
-      } else {
-        this.scale.startFullscreen();
-      }
-    }
-
     // Player update
     this.player.update();
 
@@ -291,23 +301,7 @@ export class MainScene extends Phaser.Scene {
 
     // Dialog interaction (SPACE)
     if (Phaser.Input.Keyboard.JustDown(this.spaceKey)) {
-      if (this.dialogBox.visible) {
-        this.dialogBox.advance();
-      } else if (!this.player.isInteracting) {
-        for (const npc of this.npcs) {
-          if (npc.isNearPlayer) {
-            this.player.isInteracting = true;
-            this.dialogBox.show(
-              npc.dialogData.name,
-              npc.dialogData.lines,
-              () => {
-                this.player.isInteracting = false;
-              }
-            );
-            break;
-          }
-        }
-      }
+      this.handleInteraction(true);
     }
 
     // Seed purchasing while dialog is open
@@ -323,6 +317,22 @@ export class MainScene extends Phaser.Scene {
           this.buySeed('corn_seed', 20, '🌽');
         } else if (JustDown(this.numberKeys.four)) {
           this.buySeed('pumpkin_seed', 35, '🎃');
+        } else if (JustDown(this.numberKeys.S)) {
+          this.sellAllProduce();
+        }
+      }
+    }
+
+    // Shipping bin interaction (E)
+    const ePressed = Phaser.Input.Keyboard.JustDown(this.eKey);
+    if (ePressed) {
+      if (!this.dialogBox.visible && !this.player.isInteracting) {
+        const dist = Phaser.Math.Distance.Between(
+          this.player.x, this.player.y,
+          this.shippingBin.x, this.shippingBin.y
+        );
+        if (dist < GAME_CONFIG.INTERACTION_DISTANCE + 4) {
+          this.sellAllProduce();
         }
       }
     }
@@ -332,11 +342,34 @@ export class MainScene extends Phaser.Scene {
 
     // Farming system update
     if (!this.dialogBox.visible) {
-      this.farmingSystem.update(delta);
+      this.farmingSystem.update(delta, ePressed);
     }
 
     // HUD update
     this.hud.update();
+  }
+
+  /** Handle Dialog interaction (Start or Advance) */
+  private handleInteraction(isSpace: boolean): void {
+    if (this.dialogBox.visible) {
+      this.dialogBox.advance();
+    } else if (!this.player.isInteracting) {
+      // If not interacting, we can start dialog if near NPC
+      // For mouse click, we only start if button was just pressed (handled by listener)
+      for (const npc of this.npcs) {
+        if (npc.isNearPlayer) {
+          this.player.isInteracting = true;
+          this.dialogBox.show(
+            npc.dialogData.name,
+            npc.dialogData.lines,
+            () => {
+              this.player.isInteracting = false;
+            }
+          );
+          break;
+        }
+      }
+    }
   }
 
   /** Buy seed function */
@@ -349,6 +382,26 @@ export class MainScene extends Phaser.Scene {
     } else {
       this.dialogBox.show('System', [`Not enough gold! Need ${cost}G`], () => {
          this.player.isInteracting = false;
+      });
+    }
+  }
+
+  /** Sell produce function */
+  private sellAllProduce(): void {
+    const totalValue = this.player.sellProduce();
+    if (totalValue > 0) {
+      this.player.isInteracting = true;
+      this.dialogBox.show('System', [
+        `Sold all produce for ${totalValue}G!`,
+        'Come back soon!'
+      ], () => {
+        this.player.isInteracting = false;
+      });
+    } else {
+      // Only show if not already in dialog or specifically requested
+      this.player.isInteracting = true;
+      this.dialogBox.show('System', ['No produce to sell!'], () => {
+        this.player.isInteracting = false;
       });
     }
   }

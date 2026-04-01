@@ -18,8 +18,8 @@ document.fonts.ready.then(() => {
   const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
     parent: 'game-container',
-    width: 800,
-    height: 600,
+    width: 1280,
+    height: 720,
     pixelArt: true, // สำคัญ! ให้ pixel art คมชัด
     roundPixels: true,
     backgroundColor: '#1a1a2e',

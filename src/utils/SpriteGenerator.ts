@@ -235,6 +235,9 @@ export function createObstacleTextures(scene: Phaser.Scene): void {
   ictx.fillRect(3, 1, 2, 4);
   ictx.fillRect(3, 6, 2, 1);
   scene.textures.addImage('indicator', ic as any);
+
+  // Shipping Bin (Wooden crate) from structures
+  scene.textures.addImage('shipping-bin', extractRegion(struct, 48, 0, 16, 16) as any);
 }
 
 // ============================================================
@@ -246,12 +249,12 @@ export function createCropTextures(scene: Phaser.Scene): void {
   // Legacy Seedling (early growth) - Tile 3,0
   scene.textures.addImage('seedling', extractRegion(src, 24, 0, 8, 8) as any);
 
-  // Define crop row positions (top row of the pair if tall)
+  // Define crop row positions (base row - where the sprout is)
   const cropRows: Record<string, number> = {
-    [CropType.Tomato]: 4 * 8, // Row 4
-    [CropType.Carrot]: 12 * 8, // Row 12
-    [CropType.Corn]: 10 * 8,   // Row 10
-    [CropType.Rice]: 14 * 8,   // Row 14
+    [CropType.Tomato]: 4 * 8,  // Row 5 (Base/Bottom)
+    [CropType.Carrot]: 12 * 8, // Row 12 (Short)
+    [CropType.Corn]: 11 * 8,   // Row 11 (Base/Bottom)
+    [CropType.Rice]: 14 * 8,   // Row 14 (Short)
   };
 
   const cropTypes = Object.values(CropType);
@@ -273,7 +276,9 @@ export function createCropTextures(scene: Phaser.Scene): void {
       else if (stage === 3) sx = 48;
 
       // For tall plants, stage 2 and 3 are 8x16
+      // They start from the row ABOVE (rowY - 8)
       if (isTall && stage >= 2) {
+        sy = rowY - 8;
         sh = 16;
       }
 
@@ -281,16 +286,19 @@ export function createCropTextures(scene: Phaser.Scene): void {
       const region = extractRegion(src, sx, sy, sw, sh);
       scene.textures.addImage(key, region as any);
 
-      // Extract seed icon from column 2 (x=16) and item icon from column 1 (x=8)
+      // Extract icons
       if (stage === 0) {
+        // Icons for tall plants are usually in the TOP row (rowY - 8)
+        const iconY = isTall ? rowY - 8 : rowY;
+
         const seedBagKey = `seed-bag-${type}`;
         if (!scene.textures.exists(seedBagKey)) {
-          scene.textures.addImage(seedBagKey, extractRegion(src, 16, rowY, 8, 8) as any);
+          scene.textures.addImage(seedBagKey, extractRegion(src, 16, iconY, 8, 8) as any);
         }
         
         const itemIconKey = `item-icon-${type}`;
         if (!scene.textures.exists(itemIconKey)) {
-          scene.textures.addImage(itemIconKey, extractRegion(src, 0, rowY, 8, 8) as any);
+          scene.textures.addImage(itemIconKey, extractRegion(src, 0, iconY, 8, 8) as any);
         }
       }
 

@@ -16,6 +16,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   public facing: Direction = Direction.Down;
   public playerState: PlayerState;
   public isInteracting: boolean = false;
+  private indicator!: Phaser.GameObjects.Graphics;
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y, 'player', 0);
@@ -39,6 +40,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       D: scene.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
 
+    // สร้าง indicator (ลูกศรชี้ตำแหน่ง)
+    this.indicator = scene.add.graphics();
+    this.drawIndicator();
+
     // Initial state
     this.playerState = {
       coins: 50,
@@ -55,11 +60,23 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.play('player-idle-down');
   }
 
+  private drawIndicator(): void {
+    this.indicator.clear();
+    this.indicator.fillStyle(0xffffff, 0.8);
+    // วาดรูปสามเหลี่ยมคว่ำขนาดเล็ก (4x3 พิกเซล)
+    this.indicator.fillTriangle(-2, 0, 2, 0, 0, 2);
+    this.indicator.lineStyle(0.5, 0x000000, 1);
+    this.indicator.strokeTriangle(-2, 0, 2, 0, 0, 2);
+  }
+
   update(): void {
     if (this.isInteracting) {
       this.setVelocity(0, 0);
+      this.indicator.setVisible(false);
       return;
     }
+
+    this.indicator.setVisible(true);
 
     const speed = GAME_CONFIG.PLAYER_SPEED;
     let vx = 0;
@@ -104,6 +121,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     // Depth sorting (ทำให้ตัวละครอยู่หลัง/หน้าวัตถุตาม Y)
     this.setDepth(this.y);
+
+    // อัปเดตตำแหน่ง indicator ให้ลอยอยู่เหนือหัว
+    const floatOffset = Math.sin(this.scene.time.now * 0.01) * 1;
+    this.indicator.setPosition(this.x, this.y - 10 + floatOffset);
+    this.indicator.setDepth(this.y + 10);
   }
 
   /** เพิ่มเหรียญ */
@@ -165,5 +187,44 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   useSeedForCrop(crop: CropType): boolean {
     const seedType = `${crop}_seed`;
     return this.useItem(seedType);
+  }
+
+  /** คำนวณมูลค่ารวมของผลผลิตในกระเป๋า */
+  getProduceValue(): number {
+    let total = 0;
+    const cropTypes = Object.values(CropType);
+    for (const type of cropTypes) {
+      const item = this.playerState.inventory.find(i => i.type === type);
+      if (item) {
+        total += item.count * GAME_CONFIG.CROP_VALUE[type];
+      }
+    }
+    return total;
+  }
+
+  /** ขายผลิตผลทั้งหมด */
+  sellProduce(): number {
+    let totalValue = 0;
+    const cropTypes = Object.values(CropType);
+    
+    // กรองเอาเฉพาะรายการโคลนเพื่อไม่ให้เกิดปัญหาตอนลบจาก array จริง
+    const inventoryClone = [...this.playerState.inventory];
+    
+    for (const cropType of cropTypes) {
+      const item = inventoryClone.find(i => i.type === cropType);
+      if (item && item.count > 0) {
+        const itemValue = item.count * GAME_CONFIG.CROP_VALUE[cropType];
+        totalValue += itemValue;
+        
+        // ลบออกจาก inventory จริง
+        this.playerState.inventory = this.playerState.inventory.filter(i => i.type !== cropType);
+      }
+    }
+    
+    if (totalValue > 0) {
+      this.addCoins(totalValue);
+    }
+    
+    return totalValue;
   }
 }

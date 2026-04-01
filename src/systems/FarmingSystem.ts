@@ -182,11 +182,9 @@ export class FarmingSystem {
         if (tool === 'harvest' || true) {
           // Always harvestable
           const crop = plot.crop!;
-          const value = GAME_CONFIG.CROP_VALUE[crop];
-          this.player.addCoins(value);
           this.player.addItem(crop, 1, this.getCropEmoji(crop));
           this.showStatus(
-            `Harvested ${this.getCropName(crop)}! +${value}G`
+            `Harvested ${this.getCropName(crop)}!`
           );
 
           // Reset แปลง
@@ -293,7 +291,7 @@ export class FarmingSystem {
   }
 
   /** อัปเดตทุกเฟรม */
-  update(delta: number): void {
+  update(delta: number, externalActionPressed?: boolean): void {
     // Select tool
     if (Phaser.Input.Keyboard.JustDown(this.toolKeys.one)) {
       this.player.playerState.selectedTool = 'hoe';
@@ -310,7 +308,9 @@ export class FarmingSystem {
     }
 
     // ตรวจสอบ interaction
-    if (Phaser.Input.Keyboard.JustDown(this.actionKey)) {
+    const actionPressed = externalActionPressed !== undefined ? externalActionPressed : Phaser.Input.Keyboard.JustDown(this.actionKey);
+    
+    if (actionPressed) {
       const nearPlot = this.getNearestPlot();
       if (nearPlot) {
         this.interactWithPlot(nearPlot);

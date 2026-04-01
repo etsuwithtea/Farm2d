@@ -108,6 +108,7 @@ export class NPC extends Phaser.Physics.Arcade.Sprite {
     if (this.nameTag) {
       this.nameTag.setPosition(this.x, this.y - 8);
       this.nameTag.setDepth(this.y + 1);
+      this.nameTag.setVisible(this.isNearPlayer);
     }
     if (this.indicator) {
       this.indicator.setPosition(this.x, this.y - 10);
